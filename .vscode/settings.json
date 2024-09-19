@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "termios.h": "c",
+        "ncurses.h": "c",
+        "stdio.h": "c"
+    }
+}
