@@ -19,12 +19,14 @@
 cd ~
 git clone https://github.com/wisehackermonkey/ovim.git
 cd ovim
-gcc -o ovim src/ovim.c -lncurses  
+gcc -o bin/ovim src/ovim.c -lncurses  
+./bin/ovim
+
 ```
 
 # Summary
 ### -  *[Installation](#Installation)*
-<!-- ### -  *[Deveopment](#For-developers)* -->
+### -  *[Deveopment](#For-developers)*
 <!-- ### -  *[Links](#Links)* -->
 ### -  *[Contributors](#Contributors)*
 ### -  *[License](#License)*
@@ -34,18 +36,19 @@ gcc -o ovim src/ovim.c -lncurses
 --------------
 # Screenshots
 - <img src="NNNNNN" width="400"> 
+-->
  
 
 -------------- 
 # Development
 ### 
 ```bash
+gcc -o bin/ovim src/ovim.c -lncurses ; ./bin/ovim
 ```
 
 ---
 # Links
 ###
--->
 
 --------------
 # Contributors

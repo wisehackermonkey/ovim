@@ -14,8 +14,8 @@
 // // // Function to move cursor to (row, col) position
 // // void move_cursor(int row, int col)
 // // {
-// //   // Escape sequence to move the cursor: "\033[row;colH"
-// //   printf("\033[%d;%dH", row, col);
+// //   // Escape sequence to move the cursor: "\e[row;colH"
+// //   printf("\e[%d;%dH", row, col);
 // //   fflush(stdout);
 // // }
 
@@ -102,13 +102,13 @@
 
 // void enable_mouse_tracking() {
 //     // Enable mouse tracking
-//     printf("\033[?1000h"); // Enable X10 mouse tracking
+//     printf("\e[?1000h"); // Enable X10 mouse tracking
 //     fflush(stdout);
 // }
 
 // void disable_mouse_tracking() {
 //     // Disable mouse tracking
-//     printf("\033[?1000l"); // Disable X10 mouse tracking
+//     printf("\e[?1000l"); // Disable X10 mouse tracking
 //     fflush(stdout);
 // }
 
@@ -144,13 +144,13 @@
 //     fflush(stdout);
 
 //     while (1) {
-//       int key_event = kbhit(); 
+//       int key_event = kbhit();
 //         if (key_event) {
 //             char buffer[10];
 //             int n = read(STDIN_FILENO, buffer, sizeof(buffer));
 
 //             // Check for mouse events (basic check for mouse button or motion)
-//             if (n > 0 && buffer[0] == '\033' && buffer[1] == '[') {
+//             if (n > 0 && buffer[0] == '\e' && buffer[1] == '[') {
 //                 printf("works\n");
 //                 break;
 //             }
@@ -170,71 +170,144 @@
 #include <stdbool.h>
 
 // Define a struct to hold mouse coordinates
-struct MousePosition {
-    int x;
-    int y;
+struct Pos
+{
+  int x;
+  int y;
 };
 
 // Wrap mouse_trafo to return a struct
-struct MousePosition get_mouse_position(int y, int x, bool to_screen) {
-    struct MousePosition mouse;
-    
-    // Apply the mouse_trafo transformation
-    if (mouse_trafo(&y, &x, to_screen)) {
-        mouse.x = x;
-        mouse.y = y;
-    } else {
-        mouse.x = -1; // Indicate an error in transformation
-        mouse.y = -1;
-    }
+struct Pos get_mouse_position(int x, int y, bool to_screen)
+{
+  struct Pos mouse;
 
-    return mouse;
+  // Apply the mouse_trafo transformation
+  if (mouse_trafo(&x, &y, to_screen))
+  {
+    mouse.x = x;
+    mouse.y = y;
+  }
+  else
+  {
+    mouse.x = -1; // Indicate an error in transformation
+    mouse.y = -1;
+  }
+
+  return mouse;
 }
 
-int main() {
-    // Initialize ncurses
-    initscr();
-    cbreak();
-    noecho();
-    keypad(stdscr, TRUE);
-
-    // Check if the terminal supports mouse events
-    // if (!has_mouse()) {
-    //     endwin();
-    //     printf("Mouse support is not available.\n");
-    //     return 1;
-    // }
-
-    // Enable mouse tracking
-    mousemask(ALL_MOUSE_EVENTS, NULL);
-    MEVENT event;
-
-    // Loop to capture mouse events
-    while (1) {
-        int ch = getch();
-        
-        // Detect if a mouse event occurs
-        if (ch == KEY_MOUSE) {
-            if (getmouse(&event) == OK) {
-                // Get current mouse position with mouse_trafo transformation
-                struct MousePosition mouse = get_mouse_position(event.y, event.x, TRUE);
-
-                // If valid position, print it
-                if (mouse.x != -1 && mouse.y != -1) {
-                    mvprintw(0, 0, "Mouse Position - X: %d, Y: %d", mouse.x, mouse.y);
-                    refresh();
-                }
-            }
-        }
-
-        // Exit on 'q' key press
-        if (ch == 'q') {
-            break;
-        }
-    }
-
-    // End ncurses mode
-    endwin();
-    return 0;
+void cursor_print_placeholder(struct Pos mouse)
+{
+  /*
+  Move cursor to X, Y location
+  "\e[s" saves the curent locatin of the cursor (push)
+  Print  "#" which moves cursor automatically forward 1
+  \e[u puts the cursour back to the saved location (pop)
+  */
+  // note: the +1 offset is only to make the text print right underneath the cursor location
+  // othersie it looks bad
+  printf("\e[%d;%dH\e[s#\e[u", mouse.x + 1, mouse.y + 1);
+  fflush(stdout);
+}
+void cursor_print(struct Pos mouse, char *text)
+{
+  /*
+ Move cursor to X, Y location
+  "\e[s" saves the curent locatin of the cursor (push)
+  Print  <text> which moves cursor automatically forward 1
+  \e[u puts the cursour back to the saved location (pop)
+  */
+  // note: the +1 offset is only to make the text print right underneath the cursor location
+  // othersie it looks bad
+  printf("\e[%d;%dH\e[s%s\e[u", mouse.x + 1, mouse.y + 1, text);
+  fflush(stdout);
 }
 
+// Function to move cursor to (row, col) position
+void move_cursor(struct Pos mouse)
+{
+  // Escape sequence to move the cursor: "\e[<X>;<Y>H"
+  printf("\e[%d;%dH", mouse.x, mouse.y);
+  fflush(stdout);
+}
+
+int main()
+{
+  // WINDOW *win;
+  // Initialize ncurses
+  initscr();
+  cbreak();
+  noecho(); // stops the termial from printing any character, helpfull because otherwise default is to p
+  // print all controll characters. this is not the default behavor of the terminal
+  keypad(stdscr, TRUE);
+
+   
+
+  // Enable mouse tracking
+  mousemask(ALL_MOUSE_EVENTS, NULL);
+  MEVENT event;
+
+  // win = newwin(LINES, COLS, 0, 0);
+  int x = 0;
+  int y = 0;
+  // Loop to capture mouse events
+  getyx(curscr,x, y);
+  while (1)
+  {
+    struct Pos mouse;
+
+    int ch = getch();
+    getyx(curscr, y, x);
+    // Detect if a mouse event occurs
+    if (ch == KEY_MOUSE)
+    {
+      if (getmouse(&event) == OK)
+      {
+        // Get current mouse position with mouse_trafo transformation
+        mouse = get_mouse_position(event.y, event.x, TRUE);
+
+        // If valid position, print it
+        if (mouse.x != -1 && mouse.y != -1)
+        {
+          // move_cursor(mouse);
+          // printf("#");
+          // mvprintw(0, 0, "Mouse Position - X: %d, Y: %d", mouse.x, mouse.y);
+          // mvprintw(mouse.x, mouse.y, "#");
+          // move_cursor(mouse,"hi");
+          cursor_print(mouse, "");
+          refresh();
+          ch = '\0';
+        }
+      }
+    }
+
+    if (ch != KEY_MOUSE)
+    {
+      printf("%c", ch);
+      fflush(stdout);
+    }
+    if (ch == KEY_UP)
+    {
+      // cur.x += 1;
+      // move_cursor(cur);
+      printf("KEY_UP");
+      fflush(stdout);
+    }
+    if (ch == KEY_LEFT)
+    {
+      printf("\e[I");
+      fflush(stdout);
+    }
+
+    // Exit on 'q' key press
+    if (ch == 'q')
+    {
+      break;
+    }
+  }
+
+  // End ncurses mode
+  endwin();
+
+  return 0;
+}
